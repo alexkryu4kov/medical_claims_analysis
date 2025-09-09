@@ -13,3 +13,11 @@ source .venv/bin/activate
 
 ## Reformat code
 make pretty
+
+## Code structure
+
+- **/slides/** — final presentation assets
+- **preprocessor.py** — data loader & basic preprocessing
+- **eda.py** — quick data-quality & overview tables
+- **prediction.py** — next-month drop risk per payer (logistic regression)
+- **normalization.py** — WIP: normalization helpers for specialties/services
