@@ -25,32 +25,24 @@ print(
     f"Rows: pos={(amount>0).sum()} | neg={(amount<0).sum()} | zero={(amount==0).sum()} | NaN={amount.isna().sum()}\n"
 )
 
-# ----- Разрез по SERVICE_CATEGORY -----
 col = "SERVICE_CATEGORY"
 
 print(df[col].unique())
 
-# по строкам
 rows_total = df.groupby(col).size().rename("rows_total")
 rows_zero = amount.eq(0).groupby(df[col]).sum().rename("rows_zero")
 rows_neg = amount.lt(0).groupby(df[col]).sum().rename("rows_neg")
 
-# по суммам
 pos_amt = amount.where(amount > 0, 0.0).groupby(df[col]).sum().rename("pos_amt")
-neg_amt = (
-    (-amount.where(amount < 0, 0.0)).groupby(df[col]).sum().rename("neg_amt")
-)  # модуль
+neg_amt = (-amount.where(amount < 0, 0.0)).groupby(df[col]).sum().rename("neg_amt")
 
-# сборка
 res = pd.concat([rows_total, rows_zero, rows_neg, pos_amt, neg_amt], axis=1).fillna(0)
 
-# доли и итог
 res["zero_rows_share"] = res["rows_zero"] / res["rows_total"].replace(0, np.nan)
 res["neg_rows_share"] = res["rows_neg"] / res["rows_total"].replace(0, np.nan)
 res["neg_share_amt"] = res["neg_amt"] / res["pos_amt"].replace(0, np.nan)
 res["net_amt"] = res["pos_amt"] - res["neg_amt"]
 
-# удобный порядок колонок и сортировка
 cols_to_show = [
     "rows_total",
     "rows_zero",

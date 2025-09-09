@@ -1,4 +1,3 @@
-# top3_payers_three_plots_nomom.py
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -45,9 +44,7 @@ def monthly_net_by_payer(df: pd.DataFrame) -> pd.DataFrame:
 
 def plot_one_payer(x_idx: pd.Index, y: pd.Series, outfile: str, title_prefix: str = ""):
     ma3 = y.rolling(3, min_periods=1).mean()
-    mom = y.pct_change().replace(
-        [np.inf, -np.inf], np.nan
-    )  # только для метрики стабильности
+    mom = y.pct_change().replace([np.inf, -np.inf], np.nan)
     med_abs_mom = mom.dropna().tail(12).abs().median()
     label = "Stable" if pd.notna(med_abs_mom) and med_abs_mom < 0.10 else "Volatile"
     med_txt = "—" if pd.isna(med_abs_mom) else f"{med_abs_mom*100:.1f}%"
@@ -72,9 +69,7 @@ def plot_one_payer(x_idx: pd.Index, y: pd.Series, outfile: str, title_prefix: st
 
 
 def main(input_path: str = "claims_sample_data.csv", skip_last: bool = True):
-    df = (
-        ClaimsPreprocessor(Path(input_path)).load().preprocess().df
-    )  # PCPEncounter уже фильтруется в препроцессоре
+    df = ClaimsPreprocessor(Path(input_path)).load().preprocess().get_df()
     top3 = top_payers_by_net(df, k=3, last_n_months=12)
     panel = monthly_net_by_payer(df)[top3]
 

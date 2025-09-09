@@ -8,7 +8,6 @@ from matplotlib.ticker import PercentFormatter
 from preprocessor import ClaimsPreprocessor
 
 
-# ---------- твои функции (оставляем как есть) ----------
 def payer_shares_over_time(df: pd.DataFrame, value: str = "net", top_n: int = 8):
     amt = pd.to_numeric(df["PAID_AMOUNT"], errors="coerce")
     tmp = df.assign(pos=amt.where(amt > 0, 0.0), neg=-amt.where(amt < 0, 0.0))
@@ -30,7 +29,6 @@ def payer_shares_over_time(df: pd.DataFrame, value: str = "net", top_n: int = 8)
     return values, shares, shares_top
 
 
-# ---------- визуализация: стек-диаграмма топ-N + Other ----------
 def plot_payer_share_stacked(
     df: pd.DataFrame,
     top_n: int = 8,
@@ -64,12 +62,10 @@ def plot_payer_share_stacked(
     print(f"Saved: {outfile}")
 
 
-# ========================= пример использования =========================
 prep = ClaimsPreprocessor(Path("../claims_sample_data.csv")).load().preprocess()
-df = prep.get_df()  # PCPEncounter уже исключён внутри препроцессора
+df = prep.get_df()
 
 
-# 2) Стек-диаграмма по топ-8 + Other
 plot_payer_share_stacked(
     df, top_n=8, value="net", skip_last=True, outfile="payer_share_stacked.png"
 )

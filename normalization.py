@@ -6,7 +6,7 @@ MAP = {
     "ANATOM": "Anatomy / Pathology",
     "ADVANCED RN PRACT": "Advanced RN Practice",
     "ADVANCED REGISTERED NURSE PRAC": "Advanced RN Practice",
-}
+}  # need to extend. Another option to use some knn and make clusters of similar worlds. Also seems possible to use LLM
 
 
 def norm_specialty(x):

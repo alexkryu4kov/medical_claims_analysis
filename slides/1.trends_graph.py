@@ -21,7 +21,7 @@ monthly["net_MA3"] = monthly["net"].rolling(3, min_periods=1).mean()
 
 monthly = monthly.sort_index()
 
-# 1) убираем последний месяц независимо от индекса
+# Remove July (last month) cause data is insufficient
 if len(monthly) > 0:
     monthly_plot = monthly.iloc[:-1].copy()
 else:
@@ -29,7 +29,6 @@ else:
 
 print(monthly_plot.tail())
 
-# 2) график
 fig, ax = plt.subplots(figsize=(11, 5))
 ax.plot(monthly_plot.index, monthly_plot["net"], marker="o", label="NET (monthly)")
 ax.plot(monthly_plot.index, monthly_plot["net_MA3"], marker="o", label="NET (3-mo MA)")
@@ -44,7 +43,6 @@ for lbl in ax.get_xticklabels():
 ax.grid(True, alpha=0.3)
 ax.legend()
 
-# ВАЖНО: фиксируем пределы оси X, чтобы не было «лишних» тиков за пределами данных
 if not monthly_plot.empty:
     ax.set_xlim(monthly_plot.index.min(), monthly_plot.index.max())
 

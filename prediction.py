@@ -4,15 +4,12 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import MonthBegin
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from preprocessor import (
-    ClaimsPreprocessor,
-)  # ваш класс; PCPEncounter уже фильтруется внутри
+from preprocessor import ClaimsPreprocessor
 
-DROP_THRESH = 0.30  # порог «провала» (>30% падение m/m)
+DROP_THRESH = 0.30  # threshold to predict
 
 
 def monthly_net_by_payer(df: pd.DataFrame) -> pd.DataFrame:
@@ -31,7 +28,6 @@ def monthly_net_by_payer(df: pd.DataFrame) -> pd.DataFrame:
 def build_features_for_payer(
     panel: pd.DataFrame, payer: str, drop_thresh: float = DROP_THRESH
 ):
-    """Фичи на момент t и таргет «в t+1 будет провал > drop_thresh» для одного payer."""
     if payer not in panel.columns:
         raise ValueError(f"Плательщик '{payer}' не найден.")
 
@@ -51,22 +47,17 @@ def build_features_for_payer(
         }
     )
 
-    # сезонность (месяц года)
     m = feat.index.month
     feat["sin_m"] = np.sin(2 * np.pi * m / 12)
     feat["cos_m"] = np.cos(2 * np.pi * m / 12)
 
-    # таргет: в СЛЕДУЮЩЕМ месяце будет падение > drop_thresh
     y_next = (s.pct_change().shift(-1) < -drop_thresh).astype(float)
 
-    # обучающая часть: только строки, где известен y_next и нет NaN в фичах
     mask_train = y_next.notna() & feat.notna().all(axis=1)
     X_train = feat[mask_train]
     y_train = y_next[mask_train]
 
-    # точка для прогноза: последняя строка фичей (у неё y_next = NaN по конструкции)
-    X_pred = feat.iloc[[-1]].dropna(axis=1)  # на случай, если крайние фичи NaN
-    # синхронизируем набор признаков между train/predict
+    X_pred = feat.iloc[[-1]].dropna(axis=1)
     common_cols = X_train.columns.intersection(X_pred.columns)
     X_train = X_train[common_cols]
     X_pred = X_pred[common_cols]
@@ -77,14 +68,13 @@ def build_features_for_payer(
 
 def predict_drop_probability_next_month(
     df: pd.DataFrame, payer: str
-) -> tuple[float, float, str]:
-    """Возвращает (prob, auc_in_sample, month_str) для конкретного payer."""
+) -> tuple[float, str]:
     panel = monthly_net_by_payer(df)
     X_train, y_train, X_pred, pred_month = build_features_for_payer(
         panel, payer, DROP_THRESH
     )
 
-    if len(X_train) < 8:  # минимально разумная история
+    if len(X_train) < 8:
         raise RuntimeError(
             f"Слишком мало данных для обучения по '{payer}' ({len(X_train)} точек)."
         )
@@ -102,39 +92,27 @@ def predict_drop_probability_next_month(
     )
     pipe.fit(X_train, y_train)
 
-    # in-sample AUC (для справки)
-    try:
-        auc = roc_auc_score(y_train, pipe.predict_proba(X_train)[:, 1])
-    except Exception:
-        auc = np.nan
-
     prob = float(pipe.predict_proba(X_pred)[:, 1][0])
-    return prob, auc, pred_month
+    return prob, pred_month
 
 
 if __name__ == "__main__":
-    # 1) загрузка и препроцессинг
     df = ClaimsPreprocessor(Path("claims_sample_data.csv")).load().preprocess().get_df()
 
-    # 2) выбери плательщика
     payers_to_check = ["Payer F", "Payer H", "Payer CA"]
 
     results = []
     for name in payers_to_check:
         try:
-            prob, auc, month_date = predict_drop_probability_next_month(df, name)
+            prob, month_date = predict_drop_probability_next_month(df, name)
             print(
-                f"{name}: вероятность падения >{int(DROP_THRESH * 100)}% в {month_date}: {prob:.2%}  (AUC in-sample: {auc:.2f})"
+                f"{name}: вероятность падения >{int(DROP_THRESH * 100)}% в {month_date}: {prob:.2%}"
             )
-            results.append(
-                {"PAYER": name, "month": month_date, "prob": prob, "auc_in_sample": auc}
-            )
+            results.append({"PAYER": name, "month": month_date, "prob": prob})
         except Exception as e:
             print(f"{name}: не удалось посчитать — {e}")
 
-    # опционально — аккуратная табличка
     if results:
         out = pd.DataFrame(results)
         out["prob_%"] = (out["prob"] * 100).round(1)
-        print("\nИтоговая таблица:")
-        print(out[["PAYER", "month", "prob_%", "auc_in_sample"]].to_string(index=False))
+        print(out[["PAYER", "month", "prob_%"]].to_string(index=False))

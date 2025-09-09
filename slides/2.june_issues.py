@@ -11,7 +11,6 @@ m2 = pd.Timestamp("2020-06-01")
 def delta_by_dim(df, dim, m_prev, m_cur, top=15):
     sub = df[df["MONTH"].isin([m_prev, m_cur])]
     net = sub.groupby(["MONTH", dim])["PAID_AMOUNT"].sum().unstack(fill_value=0)
-    # Свод: суммы по обоим месяцам и дельта (июнь - май)
     cur = net.loc[m_cur] if m_cur in net.index else pd.Series(0, index=net.columns)
     prev = net.loc[m_prev] if m_prev in net.index else pd.Series(0, index=net.columns)
     out = pd.DataFrame({"m_prev": prev, "m_cur": cur, "delta": cur - prev})
@@ -32,7 +31,6 @@ def volume_price_breakdown(df, dim, m_prev, m_cur, top=15):
     pivot_sum = g.pivot(index=dim, columns="MONTH", values="sum").fillna(0)
     pivot_count = g.pivot(index=dim, columns="MONTH", values="count").fillna(0)
 
-    # Назовём колонки для удобства
     if m_prev not in pivot_sum.columns:
         pivot_sum[m_prev] = 0
     if m_cur not in pivot_sum.columns:
