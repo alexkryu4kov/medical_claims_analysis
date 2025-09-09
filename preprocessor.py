@@ -1,6 +1,7 @@
-import pandas as pd
 import datetime
 from pathlib import Path
+
+import pandas as pd
 
 from normalization import norm_specialty
 
@@ -21,11 +22,11 @@ class ClaimsPreprocessor:
             raise RuntimeError("Call load() first")
         return self.df
 
-    def load(self) -> 'ClaimsPreprocessor':
+    def load(self) -> "ClaimsPreprocessor":
         self.df = pd.read_csv(self.path)
         return self
 
-    def preprocess(self) -> 'ClaimsPreprocessor':
+    def preprocess(self) -> "ClaimsPreprocessor":
         if self.df is None:
             raise RuntimeError("Call load() first")
 
@@ -40,10 +41,10 @@ class ClaimsPreprocessor:
 
         df["PAID_AMOUNT"] = pd.to_numeric(df["PAID_AMOUNT"], errors="coerce")
 
-        df["SERVICE_CATEGORY"] = df["SERVICE_CATEGORY"].replace({
-            "SpecialistsFFS": "SpecialistFFS"
-        })
-        df = df[~df['SERVICE_CATEGORY'].isin(['PCPEncounter'])].copy()
+        df["SERVICE_CATEGORY"] = df["SERVICE_CATEGORY"].replace(
+            {"SpecialistsFFS": "SpecialistFFS"}
+        )
+        df = df[~df["SERVICE_CATEGORY"].isin(["PCPEncounter"])].copy()
 
         for col in ["SERVICE_CATEGORY", "CLAIM_SPECIALTY", "PAYER"]:
             if col in df.columns:

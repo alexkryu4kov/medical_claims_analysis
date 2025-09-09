@@ -1,18 +1,22 @@
 from pathlib import Path
-from preprocessor import ClaimsPreprocessor
-import pandas as pd
+
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.ticker import StrMethodFormatter
+
+from preprocessor import ClaimsPreprocessor
 
 prep = ClaimsPreprocessor(Path("../claims_sample_data.csv")).load().preprocess()
 df = prep.get_df()
 
 amt = pd.to_numeric(df["PAID_AMOUNT"], errors="coerce")
-tmp = df.assign(pos=amt.where(amt > 0, 0.0),
-                neg=-amt.where(amt < 0, 0.0))
-monthly = (tmp.groupby("MONTH")[["pos", "neg"]].sum()
-             .sort_index()
-             .assign(net=lambda x: x["pos"] - x["neg"]))
+tmp = df.assign(pos=amt.where(amt > 0, 0.0), neg=-amt.where(amt < 0, 0.0))
+monthly = (
+    tmp.groupby("MONTH")[["pos", "neg"]]
+    .sum()
+    .sort_index()
+    .assign(net=lambda x: x["pos"] - x["neg"])
+)
 monthly["net_MA3"] = monthly["net"].rolling(3, min_periods=1).mean()
 
 monthly = monthly.sort_index()
@@ -35,7 +39,8 @@ ax.set_xlabel("Month")
 ax.set_ylabel("Amount")
 ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
 for lbl in ax.get_xticklabels():
-    lbl.set_rotation(45); lbl.set_ha("right")
+    lbl.set_rotation(45)
+    lbl.set_ha("right")
 ax.grid(True, alpha=0.3)
 ax.legend()
 
@@ -48,4 +53,10 @@ plt.savefig("trend.png", dpi=200)
 print("Saved: trend.png")
 
 print("\nLast 12 months (pos/neg/net/MA3):")
-print(monthly_plot[["pos","neg","net","net_MA3"]].tail(12).round(0).astype(int).to_string())
+print(
+    monthly_plot[["pos", "neg", "net", "net_MA3"]]
+    .tail(12)
+    .round(0)
+    .astype(int)
+    .to_string()
+)

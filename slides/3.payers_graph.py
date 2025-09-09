@@ -1,19 +1,24 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.ticker import PercentFormatter
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.ticker import PercentFormatter
+
 from preprocessor import ClaimsPreprocessor
+
 
 # ---------- твои функции (оставляем как есть) ----------
 def payer_shares_over_time(df: pd.DataFrame, value: str = "net", top_n: int = 8):
     amt = pd.to_numeric(df["PAID_AMOUNT"], errors="coerce")
     tmp = df.assign(pos=amt.where(amt > 0, 0.0), neg=-amt.where(amt < 0, 0.0))
-    by = (tmp.groupby(["MONTH","PAYER"])
-            .agg(pos=("pos","sum"), neg=("neg","sum"))
-            .sort_index())
+    by = (
+        tmp.groupby(["MONTH", "PAYER"])
+        .agg(pos=("pos", "sum"), neg=("neg", "sum"))
+        .sort_index()
+    )
     by["net"] = by["pos"] - by["neg"]
-    assert value in {"net","pos"}
+    assert value in {"net", "pos"}
     values = by[value].unstack("PAYER", fill_value=0.0).sort_index()
     totals = values.sum(axis=1).replace(0, np.nan)
     shares = values.div(totals, axis=0)
@@ -26,11 +31,13 @@ def payer_shares_over_time(df: pd.DataFrame, value: str = "net", top_n: int = 8)
 
 
 # ---------- визуализация: стек-диаграмма топ-N + Other ----------
-def plot_payer_share_stacked(df: pd.DataFrame,
-                             top_n: int = 8,
-                             value: str = "net",
-                             skip_last: bool = True,
-                             outfile: str = "payer_share_stacked.png"):
+def plot_payer_share_stacked(
+    df: pd.DataFrame,
+    top_n: int = 8,
+    value: str = "net",
+    skip_last: bool = True,
+    outfile: str = "payer_share_stacked.png",
+):
     _, _, shares_top = payer_shares_over_time(df, value=value, top_n=top_n)
 
     if skip_last and len(shares_top) > 0:
@@ -46,10 +53,16 @@ def plot_payer_share_stacked(df: pd.DataFrame,
     ax.yaxis.set_major_formatter(PercentFormatter(xmax=1))
     plt.xticks(rotation=45, ha="right")
     ax.grid(True, axis="y", alpha=0.3)
-    ax.legend(shares_top.columns.tolist(), ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.15))
+    ax.legend(
+        shares_top.columns.tolist(),
+        ncol=3,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.15),
+    )
     plt.tight_layout()
     plt.savefig(outfile, dpi=200)
     print(f"Saved: {outfile}")
+
 
 # ========================= пример использования =========================
 prep = ClaimsPreprocessor(Path("../claims_sample_data.csv")).load().preprocess()
@@ -57,5 +70,6 @@ df = prep.get_df()  # PCPEncounter уже исключён внутри преп
 
 
 # 2) Стек-диаграмма по топ-8 + Other
-plot_payer_share_stacked(df, top_n=8, value="net",
-                         skip_last=True, outfile="payer_share_stacked.png")
+plot_payer_share_stacked(
+    df, top_n=8, value="net", skip_last=True, outfile="payer_share_stacked.png"
+)
